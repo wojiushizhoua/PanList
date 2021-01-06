@@ -2,9 +2,11 @@
  ☁️ A netdisk Directory Index, built with CloudFlare Workers.
 
 # TODO
-- [] Cache
-- [] File Preview
-- [] Auth
+- [x] Cache
+- [ ] Pagination
+- [ ] File Preview
+- [ ] Settings / Admin Page
+- [ ] Auth
 
 # Usage
 ```javascript
