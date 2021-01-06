@@ -3,10 +3,10 @@
 
 # TODO
 - [x] Cache
+- [x] Auth
 - [ ] Pagination
 - [ ] File Preview
 - [ ] Settings / Admin Page
-- [ ] Auth
 
 # Usage
 ```javascript
@@ -14,6 +14,9 @@
 // Or comment out those, then add them into CloudFlare Environment Variables.
 const BDUSS = ''
 const STOKEN = ''
+// Enter your authentication configuration below. (optional)
+const USERNAME = ''
+const PASSWORD = ''
 ```
 
 # Demo 

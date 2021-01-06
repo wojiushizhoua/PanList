@@ -2,9 +2,58 @@
 // Or comment out those, then add them into CloudFlare Environment Variables.
 const BDUSS = ''
 const STOKEN = ''
+// Enter your authentication configuration below. (optional)
+const USERNAME = ''
+const PASSWORD = ''
 
 // Keep default for now.
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.514.1919.810 Safari/537.36'
+
+const loginPage = `<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>登录 - PanList</title>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mdui@1.0.1/dist/css/mdui.min.css" integrity="sha384-cLRrMq39HOZdvE0j6yBojO4+1PrHfB7a9l5qLcmRm/fiWXYY+CndJPmyu5FV/9Tw" crossorigin="anonymous" />
+<script src="https://cdn.jsdelivr.net/npm/mdui@1.0.1/dist/js/mdui.min.js" integrity="sha384-gCMZcshYKOGRX9r6wbDrvF+TcCCswSHFucUzUPwka+Gr+uHgjlYvkABr95TCOz3A" crossorigin="anonymous"></script>
+<meta name="msapplication-TileColor" content="#9f00a7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#3f51b5">
+</head>
+<body class="padding-top mdui-appbar-with-toolbar mdui-theme-primary-indigo mdui-theme-accent-pink">
+<div class="mdui-appbar mdui-appbar-fixed">
+<div class="mdui-toolbar mdui-color-theme">
+<a href="/" class="mdui-typo-headline">PanList</a>
+<div class="mdui-toolbar-spacer"></div>
+<a href="https://github.com/teardr0p/PanList/" class="mdui-btn">GitHub</a>
+</div>
+</div>
+<div class="mdui-container mdui-center mdui-typo">
+<div class="mdui-col-offset-md-3 mdui-col-md-6 mdui-col-xs-12">
+<h1>登录</h1>
+<form method="post" >
+<div id="username-login">
+<div class="mdui-textfield mdui-textfield-floating-label">
+<i class="mdui-icon material-icons">account_circle</i>
+<label class="mdui-textfield-label" for="name">用户名</label>
+<input class="mdui-textfield-input" type="text" name="username" id="name" autofocus required />
+</div>
+</div>
+<div class="mdui-textfield mdui-textfield-floating-label">
+<i class="mdui-icon material-icons">lock</i>
+<label class="mdui-textfield-label" for="password">密码</label>
+<input class="mdui-textfield-input" type="password" name="password" id="password" required />
+</div>
+<button class="mdui-btn mdui-btn-raised mdui-ripple mdui-color-theme-accent mdui-m-t-3" type="submit" id="submit">
+登录
+</button>	
+</form>
+</div>
+</div>
+</body>
+</html>`
 
 const listHeader = `<!DOCTYPE html>
 <html>
@@ -109,28 +158,78 @@ addEventListener('fetch', event => {
 })
 
 async function handleRequest(request,event) {
+  const logStatus = await loginStatus(request.clone())
+  let response
   const url = new URL(request.url)
   const host = request.headers.get('Host')
   const dlpath = request.url.split(host)[1]
   const path = request.url.split(host)[1].split('?')[0]
   let params = url.searchParams;
   const page = params.get('page') == null || params.get('page') == undefined || params.get('page') == '' ? 1 : parseInt(params.get('page'))
-  let response
-  if(params.get('download') == 1){
-    response = await downloadFile(path,request,event)
-  }
-  else if(path.match(/\/file\/\w{32}/)){
-    response = await down(params.get('bdhost'),dlpath,request)
-  }
-  else if(params.get('clearcache') == 1){
-    response = await clearCache(path,page,event)
+  if(logStatus || USERNAME == '' || PASSWORD == ''){
+    if(params.get('download') == 1){
+      response = await downloadFile(path,request,event)
+    }
+    else if(path.match(/\/file\/\w{32}/)){
+      response = await down(params.get('bdhost'),dlpath,request)
+    }
+    else if(params.get('clearcache') == 1){
+      response = await clearCache(path,page,event)
+    }
+    else{
+      response = new Response(await getFileList(path,page,event), {
+        headers: { 'content-type': 'text/html;charset=utf-8' },
+      })
+    }
   }
   else{
-    response = new Response(await getFileList(path,page,event), {
+    if(request.method.toUpperCase() == 'POST'){
+      response = await handleLogin(request)
+    }
+    else if(path.match(/\/file\/\w{32}/)){
+      response = await down(params.get('bdhost'),dlpath,request) // compatible with direct download
+    }
+    else{
+      response = new Response(loginPage, {
+        headers: { 'content-type': 'text/html;charset=utf-8' },
+      })
+    }
+  }
+  return response
+}
+
+async function loginStatus(request){
+  try {
+    const userhash = request.headers.get('Cookie').match(/userhash=(\w{64})$/)
+    if(userhash){
+      const realhash = await sha256(USERNAME+'PanListUserCheck'+PASSWORD)
+      if(userhash[1] == realhash){
+        return true
+      }
+    }
+    return false
+  } catch (error) {
+    return false
+  }
+}
+
+async function handleLogin(request){
+  const loginForm = await request.formData()
+  const username = loginForm.get('username')
+  const password = loginForm.get('password')
+  if(username == USERNAME && password == PASSWORD){
+    let date = new Date()
+    date.setDate(date.getDate() + 7)
+    let userhash = await sha256(USERNAME+'PanListUserCheck'+PASSWORD)
+    return new Response('{"errno":302}',{
+      status:302,
+      headers:{'Set-Cookie':'userhash='+userhash+'; Expires='+date.toUTCString(),'Location':'/'}
+    })
+  }else{
+    return new Response(loginPage, {
       headers: { 'content-type': 'text/html;charset=utf-8' },
     })
   }
-  return response
 }
 
 async function downloadFile(path,request,event){
@@ -171,6 +270,21 @@ async function downloadFile(path,request,event){
       }
     }
     return false
+}
+
+async function sha256(message) {
+  // encode as UTF-8
+  const msgBuffer = new TextEncoder().encode(message)
+
+  // hash the message
+  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer)
+
+  // convert ArrayBuffer to Array
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+
+  // convert bytes to hex string
+  const hashHex = hashArray.map(b => ("00" + b.toString(16)).slice(-2)).join("")
+  return hashHex
 }
 
 async function clearCache(path,page,event){
