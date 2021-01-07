@@ -4,7 +4,7 @@
 # TODO
 - [x] Cache
 - [x] Auth
-- [ ] Pagination
+- [x] Pagination
 - [ ] File Preview
 - [ ] Settings / Admin Page
 

@@ -66,6 +66,39 @@ const listHeader = `<!DOCTYPE html>
   <style> 
   html{height:100%;}
   body{min-height:100%;margin:0;padding:0;position:relative;}
+  /* https://github.com/zdhxiong/mdui/pull/61 */
+  .mdui-pagination {
+	 padding-left: 0;
+	 list-style-type: none;
+}
+ .mdui-pagination li {
+	 display: inline-block;
+	 border-radius: 2px;
+	 text-align: center;
+	 vertical-align: top;
+	 height: 30px;
+}
+ .mdui-pagination li a {
+	 text-decoration: none;
+	 display: inline-block;
+	 font-size: 1.2rem;
+	 padding: 0 10px;
+	 line-height: 30px;
+	 color: inherit;
+}
+ .mdui-pagination li i {
+	 color: inherit;
+}
+ .mdui-pagination li.active a {
+	 color: #fff;
+}
+ .mdui-pagination li.active {
+	 background-color: black;
+}
+ .mdui-pagination li.disabled a {
+	 cursor: default;
+	 color: rgba(0, 0, 0, 0.26);
+}
   footer {
     /* I don't know anything about CSS, somebody pls help me */
     width: 100%;
@@ -351,6 +384,43 @@ async function getFileList(path,page,event){
       const fileList = fileJson['list']
       const pathList = path.split('/')
       var folderHtml = ``
+      let pageModule = `<ul class="mdui-pagination">`
+      for(k=1;k<=page;k++){
+        if(page == 1 && fileList.length < 50){
+          pageModule += `<li class="disabled"><a href="#"><i class="mdui-icon material-icons">&#xe5cb;</i></a></li>
+          <li class="active"><a href="?page=1">1</a></li><li class="disabled"><a href="#"><i class="mdui-icon material-icons">&#xe5cc;</i></a></li></ul>`
+        }
+        else{
+          if(fileList.length < 50){
+            if(k == 1){
+              if(page == 1){
+                pageModule += `<li class="disabled"><a href="#"><i class="mdui-icon material-icons">&#xe5cb;</i></a></li>`
+              }else{
+                pageModule += `<li class="mdui-ripple"><a href="?page=${page-1}"><i class="mdui-icon material-icons">&#xe5cb;</i></a></li>`
+              }
+            }
+            if(k != page){
+              pageModule += `<li class="mdui-ripple"><a href="?page=${k}">${k}</a></li>`
+            }else{
+              pageModule += `<li class="active"><a href="?page=${k}">${k}</a></li><li class="disabled"><a href="#"><i class="mdui-icon material-icons">&#xe5cc;</i></a></li></ul>`
+            }
+          }else{
+            if(k == 1){
+              if(page == 1){
+                pageModule += `<li class="disabled"><a href=""><i class="mdui-icon material-icons">&#xe5cb;</i></a></li>`
+              }else{
+                pageModule += `<li class="mdui-ripple"><a href="?page=${page-1}"><i class="mdui-icon material-icons">&#xe5cb;</i></a></li>`
+              }
+            }
+            if(k != page){
+              pageModule += `<li class="mdui-ripple"><a href="?page=${k}">${k}</a></li>`
+            }else{
+              pageModule += `<li class="active"><a href="?page=${k}">${k}</a></li><li class="mdui-ripple"><a href="?page=${page+1}"><i class="mdui-icon material-icons">&#xe5cc;</i></a></li></ul>`
+            }
+          }
+        }
+      }
+
       for(i=0;i<pathList.length;i++){
         folderName = pathList[i]
         if(folderName == ''){
@@ -381,7 +451,7 @@ async function getFileList(path,page,event){
           <div class="mdui-col-sm-3 mdui-text-right">修改时间 </div>
           <div class="mdui-col-sm-2 mdui-text-right">大小 </div>
         </li>`
-      if(fileList.length == 0 && page == 1){
+      if(fileList.length == 0){
         return changeTitle(path,listHeader) + filesHeader + `<li class="mdui-list-item mdui-ripple">
           <a href="${getPreviousPath(path)}">
             <div class="mdui-col-xs-12 mdui-col-sm-7">
@@ -391,7 +461,7 @@ async function getFileList(path,page,event){
             <div class="mdui-col-sm-3 mdui-text-right"></div>
             <div class="mdui-col-sm-2 mdui-text-right"></div>
             </a>
-        </li>` + listFooter
+        </li>` + pageModule + listFooter
       }
       else{
         var fileHtml = ``
@@ -431,7 +501,7 @@ async function getFileList(path,page,event){
           </li>`
           }
         }
-        return changeTitle(path,listHeader)+filesHeader+fileHtml+listFooter
+        return changeTitle(path,listHeader)+filesHeader+fileHtml+pageModule+listFooter
       }
     }
     return 'config error'
